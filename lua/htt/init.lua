@@ -35,7 +35,7 @@ function M.set_syntax()
       \ keepend oneline contained
       \ contains=httTextLineContinuation,httLuaExpr,httComponentCall
 
-    syntax region httLuaLine start='^\s*%\([^@]\)\@=' end='$' contains=@Lua keepend oneline
+    syntax region httLuaLine start='\v^\s*%([^@])@=' end='$' contains=@Lua keepend oneline
     " Hack, explicitly match '% end' to apply Keyword style to 'end'
     " ... otherwise, it is marked in an error code, becaus the syntax highlighter thinks
     " ... it is unmatched...
