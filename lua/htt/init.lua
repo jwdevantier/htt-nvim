@@ -27,6 +27,14 @@ function M.set_syntax()
     " NOTE: defined near the top so subsequent rules can have higher priority
     syntax match httTopLevelError '^\s*.*$'
 
+
+    " Text lines
+    syntax region httTextLine
+	   \ start='^\s*\ze[^%]'
+      \ end='$'
+      \ keepend oneline contained
+      \ contains=httTextLineContinuation,httLuaExpr,httComponentCall
+
     syntax region httLuaLine start='^\s*%\([^@]\)\@=' end='$' contains=@Lua keepend oneline
     " Hack, explicitly match '% end' to apply Keyword style to 'end'
     " ... otherwise, it is marked in an error code, becaus the syntax highlighter thinks
@@ -64,13 +72,6 @@ function M.set_syntax()
       \ contains=httLuaBlock
       \ keepend extend
       \ transparent
-  
-    " Text lines
-    syntax region httTextLine
-      \ start='^\s*[^%]'
-      \ end='$'
-      \ keepend oneline contained
-      \ contains=httTextLineContinuation,httLuaExpr,httComponentCall
 
     syntax match httTextLineContinuation '\~>' contained
 
