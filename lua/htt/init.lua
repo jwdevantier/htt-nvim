@@ -35,10 +35,13 @@ function M.set_syntax()
       \ keepend oneline contained
       \ contains=httTextLineContinuation,httLuaExpr,httComponentCall
 
-    syntax region httLuaLine start='\v^\s*%([^@])@=' end='$' contains=@Lua keepend oneline
+    " match all lua syntax (@Lua),
+    " explicitly match 'elseif ... then' lines, handled by luaCondElseif in the Lua syntax file
+    syntax region httLuaLine start='\v^\s*%([^@])@=' end='$' contains=@Lua,luaCondElseif keepend oneline
     " Hack, explicitly match '% end' to apply Keyword style to 'end'
     " ... otherwise, it is marked in an error code, becaus the syntax highlighter thinks
     " ... it is unmatched...
+    syntax match httLuaLineCondElse '\<else\>' contained containedin=httLuaLine
     syntax match httLuaLineEnd '\<end\>' contained containedin=httLuaLine
 
     "Directive lines
@@ -146,6 +149,7 @@ function M.set_syntax()
     highlight default link httLuaLineStart Operator
     highlight default link httDirectiveStart Operator
 
+    highlight link httLuaLineCondElse Conditional
     highlight link httLuaLineEnd luaFunction
 
     highlight link httTextLineContinuation Comment
