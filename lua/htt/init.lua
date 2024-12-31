@@ -1,6 +1,6 @@
 local M = {}
 
-function add_debug_cmd()
+local function add_debug_cmd()
   vim.api.nvim_command([[
     function! SyntaxDebug()
       for id in synstack(line("."), col("."))
@@ -14,157 +14,73 @@ end
 
 function M.set_syntax()
   vim.cmd("syntax clear")
-
-
   vim.cmd([[
-    syntax include @Lua syntax/lua.vim
-
-    " Hack, clear luaParenError and luaError
-    syntax clear luaParenError
-    syntax clear luaError
-
-    " catch-all for top-level, if applied, marks up text as Error
-    " NOTE: defined near the top so subsequent rules can have higher priority
-    syntax match httTopLevelError '^\s*.*$'
-
-
-    " Text lines
-    syntax region httTextLine
-	   \ start='^\s*\ze[^%]'
-      \ end='$'
-      \ keepend oneline contained
-      \ contains=httTextLineContinuation,httLuaExpr,httComponentCall
-
-    " match all lua syntax (@Lua),
-    " explicitly match 'elseif ... then' lines, handled by luaCondElseif in the Lua syntax file
-    syntax region httLuaLine start='\v^\s*%([^@])@=' end='$' contains=@Lua,luaCondElseif keepend oneline
-    " Hack, explicitly match '% end' to apply Keyword style to 'end'
-    " ... otherwise, it is marked in an error code, becaus the syntax highlighter thinks
-    " ... it is unmatched...
-    syntax match httLuaLineCondElse '\<else\>' contained containedin=httLuaLine
-    syntax match httLuaLineEnd '\<end\>' contained containedin=httLuaLine
-
-    "Directive lines
-    syntax match httDirective '^\s*%\s*@.*' contains=httDirectiveSymbol,httDirectiveKeyword
-    syntax match httDirectiveSymbol "^\s*%" contained contains=httDirectiveStart
-    syntax match httDirectiveKeyword '@\w\+' contained
-    syntax match httDirectiveStart '%' contained
-
-    " Lua code blocks (between '% @code' and nearest '% @end')
-    syntax region httLuaBlock start='^\s*%\s*@code\s*$' end='^\s*%\s*@end\s*$' contains=@Lua,httDirective keepend contained
-
-    " Component lines
-    " Lua code blocks (between '% @code' and nearest '% @end')
-    syntax match httComponentStart '^\s*%\s*@component' contained contains=httDirective
-    syntax match httComponentEnd '^\s*%\s*@end\s*$' contained contains=httDirective
-
-    syntax cluster httComponentContents contains=httTextLine,httLuaLine,httLuaBlock,httDirective
-
-    syntax region httComponentBlock
-      \ start='^\s*%\s*@component'
-      \ end='^\s*%\s*@end\s*$'
-      \ contains=httComponentStart,httComponentEnd,@httComponentContents,httDirective
-      \ keepend extend
-      \ fold
-
-    syntax region httComponentSkipLuaBlock
-      \ start='^\s*%\s*@code\s*$'
-      \ end='^\s*%\s*@end\s*$'
-      \ contained
-      \ containedin=httComponentBlock
-      \ contains=httLuaBlock
-      \ keepend extend
-      \ transparent
-
-    syntax match httTextLineContinuation '\~>' contained
-
-
-    " ---- start httLuaExpr
-    syntax match httLuaExprDelimiter '{{' contained
-    syntax match httLuaExprDelimiter '}}' contained
-
-    syntax region httLuaString start=+'+ skip=+\\'+ end=+'+ contained extend
-    syntax region httLuaString start=+"+ skip=+\\"+ end=+"+ contained extend
-    syntax region httLuaMultilineString start='\[\[' end='\]\]' contained extend
-    syntax region httLuaMultilineComment start='--\[\[' end='\]\]--' contained extend
-
-    syntax match httLuaExprEnd '}}' containedin=httLuaExpr contained
-
-    syntax cluster httLuaExprContents
-      \ contains=httLuaExprDelimiter,@Lua,httLuaString,httLuaMultilineString,httLuaMultilineComment
-
-    syntax region httLuaExpr start='{{' end='}}' contains=@httLuaExprContents keepend extend contained
-
-    highlight link httLuaExprDelimiter Special
-    highlight link httLuaString luaString
-    highlight link httLuaMultilineString luaString
-    highlight link httLuaMultilineComment luaComment
-    highlight link httLuaExprEnd Special
-    " ----- end
-
-    " ---- start httComponentCall
-    syntax match httComponentCallStart '{{@' contained
-    syntax match httComponentCallEnd '}}' contained
-
-    syntax region httComponentCall
-      \ start='{{@'
-      \ end='}}'
-      \ contains=httComponentCallStart,httComponentCallEnd,httComponentExpr,httComponentArgs
-      \ keepend extend contained
-
-    syntax region httComponentExpr
-      \ start='\s\+\zs'
-      \ end='\ze\s'
-      \ contained
-      \ containedin=httComponentCall
-      \ contains=@httLuaExprContents
-      \ nextgroup=httComponentArgs
-      \ skipwhite
-
-    syntax region httComponentArgs
-      \ start='\S\+\s\+\zs'
-      \ end='\ze}}'
-      \ contained
-      \ containedin=httComponentCall
-      \ contains=@httLuaExprContents
-
-    highlight link httComponentCallStart Special
-    highlight link httComponentCallEnd Special
-    highlight link httComponentExpr Function
-    highlight link httComponentArgs Normal
-
-    " ---- end
-
-    syntax cluster httTopLevel contains=httDirective,httLuaBlock,httComponentBlock,httLuaLine
-
-    syntax region httFile start='\%^' end='\%$' contains=@httTopLevel,httTopLevelError
-
+  syntax include @Lua syntax/lua.vim
+  
+  " Hack, clear luaParenError and luaError
+  syntax clear luaParenError
+  syntax clear luaError
+  
+  syntax region httExpr matchgroup=httExprDelim start='{{' end='}}' oneline contained contains=@Lua
+  syntax region httCall matchgroup=httCallDelim start='{{@' end='}}' oneline contained contains=httComponentIdent
+  
+  syntax match httComponentIdent '\v\s*\zs\w+' skipwhite nextgroup=@Lua
+  
+  syntax match httLine '.*$' oneline transparent contains=httExpr,httCall
+  syntax match httLineStart '\v^.+$' oneline contains=httLine
+  syntax match httLineCont '\v\~\>' contained nextgroup=httLine
+  syntax match httLineStart '\v^\~\>.*$' oneline contains=httLineCont
+  
+  syntax match httLuaLineStart '\v^\s*[%]\s*.*$' contains=httLuaLineCtlOpen
+  syntax match httLuaLineCtlOpen '\v^\s*\zs[%]' contained nextgroup=httLuaLine_e2
+  syntax match httLuaLine_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLine
+  syntax match httLuaLine '\v.*$' contained contains=@Lua,luaCondElseif keepend
+  
+  syntax match httLuaLineEndStart '\v^\s*[%]\s*<end>\s*$' contains=httLuaLineEndCtlOpen
+  syntax match httLuaLineEndCtlOpen '\v^\s*\zs[%]' contained nextgroup=httLuaLineEnd_e2
+  syntax match httLuaLineEnd_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineEnd
+  syntax match httLuaLineEnd '\v<end>\s*$' contained
+  
+  syntax match httLuaLineElseStart '\v^\s*[%]\s*<else>\s*$' contains=httLuaLineElseCtlOpen
+  syntax match httLuaLineElseCtlOpen '\v^\s*\zs[%]' contained nextgroup=httLuaLineElse_e2
+  syntax match httLuaLineElse_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineElse
+  syntax match httLuaLineElse '\v<else>\s*$' contained
+  
+  syntax match httDirectiveStart '\v^\s*[%]\s*[@]\w+\s*(\w+)?\s*$' contains=httDirectiveCtlOpen
+  syntax match httDirectiveCtlOpen '\v^\s*\zs[%]' contained nextgroup=httDirective_e2
+  syntax match httDirective_e2 '\v\s*' contained transparent contains=NONE nextgroup=httDirectiveKw
+  syntax match httDirectiveKw '\v[@]\w+' contained nextgroup=httDirective_e4
+  syntax match httDirective_e4 '\v\s*' contained transparent contains=NONE nextgroup=httDirectiveArg
+  syntax match httDirectiveArg '\v(\w+)?\ze\s*$' contained
+  
+  syntax match httLuaBlock '\v^\s*[%]\s*[@]code\s*$\_.{-}^\s*[%]\s*[@]end\s*$' skipwhite contains=httDirectiveStart,@Lua
+  
+  syntax cluster httCtlOpenTag contains=httDirectiveCtlOpen,httLuaLineCtlOpen,httLuaLineElseCtlOpen
+  
+  highlight link httDirectiveKw Structure
+  highlight link httDirectiveArg Label
+  highlight link httLineCont Comment
+  highlight link httExprDelim Delimiter
+  highlight link httCallDelim Include
+  
+  highlight link httLuaLineCtlOpen Special
+  highlight link httDirectiveCtlOpen httLuaLineCtlOpen
+  highlight link httLuaLineElseCtlOpen httLuaLineCtlOpen
+  highlight link httLuaLineEndCtlOpen httLuaLineCtlOpen
+  
+  highlight link httComponentIdent Label
+  
+  highlight link httLuaLineElse luaCond
+  highlight link httLuaLineEnd luaCond
+  
+  syntax match luaTableKey "\(\w\+\)\s*=" contains=luaSymbolOperator contained containedin=luaTableBlock
+  highlight link luaTableKey Identifier
   ]])
-
-  vim.cmd([[
-    highlight default link httDirective PreProc
-    highlight default link httDirectiveSymbol Operator
-    highlight default link httDirectiveKeyword Identifier
-    "highlight default link httLuaLine Normal
-    highlight default link httLuaLineStart Operator
-    highlight default link httDirectiveStart Operator
-
-    highlight link httLuaLineCondElse Conditional
-    highlight link httLuaLineEnd luaFunction
-
-    highlight link httTextLineContinuation Comment
-
-    highlight link httTopLevelError Error
-
-  ]])
-
-  vim.cmd("syntax sync fromstart")
-
   add_debug_cmd()
 end
 
 M.setup = function()
-  vim.api.nvim_create_autocmd({"BufRead", "BufNewFile", "FileType"}, {
+  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile", "FileType" }, {
     pattern = "*.htt",
     callback = function(args)
       vim.bo[args.buf].filetype = "htt"
@@ -173,5 +89,7 @@ M.setup = function()
     group = vim.api.nvim_create_augroup("HTTSetup", { clear = true })
   })
 end
+
+
 
 return M

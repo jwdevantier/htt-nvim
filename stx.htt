@@ -1,0 +1,126 @@
+% @component CtlLineStartPattern
+\v^\s*\zs[%]\ze\s*
+% @end
+
+% @component CtlLineStart
+matchgroup=httCtrlOpen start='{{@ CtlLineStartPattern {} }}'
+% @end
+
+% @component RenderRule
+% local rule = ctx.rule
+syntax match {{rule:full_match_name()}} '\v{{rule:full_match()}}' contains={{rule.elems[1].name}}
+% for i=1, #rule.elems do
+  % local elem = rule.elems[i]
+syntax match {{elem.name}} '\v{{elem.pattern}}' contained
+  % if elem.capture == false then
+~> transparent contains=NONE
+  % end
+	% if elem.contains then
+	  % if type(elem.contains) == "string" then
+~> contains={{elem.contains}}
+		% elseif type(elem.contains) == "table" then
+		  % if #elem.contains > 0 then
+~> contains={{table.concat(elem.contains, ",")}}
+      % end
+		% else
+		% error("elem.contains is invalid")
+		% end
+	% end -- contains
+	% if elem.keepend then
+~> keepend
+  % end
+  % if i < #rule.elems then
+~> nextgroup={{rule.elems[i+1].name}}
+  % else
+  % end
+% end
+% @end
+
+% @component Rules
+syntax include @Lua syntax/lua.vim
+
+" Hack, clear luaParenError and luaError
+syntax clear luaParenError
+syntax clear luaError
+
+syntax region httExpr matchgroup=httExprDelim start='{{[[{{]]}}' end='{{[[}}]]}}' oneline contained contains=@Lua
+syntax region httCall matchgroup=httCallDelim start='{{[[{{@]]}}' end='{{[[}}]]}}' oneline contained contains=httComponentIdent
+
+syntax match httComponentIdent '\v\s*\zs\w+' skipwhite nextgroup=@Lua
+
+syntax match httLine '.*$' oneline transparent contains=httExpr,httCall
+syntax match httLineStart '\v^.+$' oneline contains=httLine
+% -- TODO: can a line continuation START with whitespace?
+syntax match httLineCont '\v\~\>' contained nextgroup=httLine
+syntax match httLineStart '\v^\~\>.*$' oneline contains=httLineCont
+  % for _, rule in ipairs(ctx.rules) do
+
+{{@ RenderRule {rule = rule}}}
+  % end
+
+% -- syntax region httLuaBlock matchgroup=httDirectiveStart start='\v^\s*[%]\s*[@]code\s*$' matchgroup=httDirectiveStart end='^\s*%\s*@end\s*$' transparent contains=@Lua keepend
+syntax match httLuaBlock '\v^\s*[%]\s*[@]code\s*$\_.{-}^\s*[%]\s*[@]end\s*$' skipwhite contains=httDirectiveStart,@Lua
+
+syntax cluster httCtlOpenTag contains=httDirectiveCtlOpen,httLuaLineCtlOpen,httLuaLineElseCtlOpen
+
+highlight link httDirectiveKw Structure
+highlight link httDirectiveArg Label
+highlight link httLineCont Comment
+highlight link httExprDelim Delimiter
+highlight link httCallDelim Include
+
+highlight link httLuaLineCtlOpen Special
+highlight link httDirectiveCtlOpen httLuaLineCtlOpen
+highlight link httLuaLineElseCtlOpen httLuaLineCtlOpen
+highlight link httLuaLineEndCtlOpen httLuaLineCtlOpen
+
+highlight link httComponentIdent Label
+
+% -- apply similar styling to 'elseif' and 'end' on lua lines
+highlight link httLuaLineElse luaCond
+highlight link httLuaLineEnd luaCond
+
+% -- style Lua table key identifiers
+syntax match luaTableKey "\(\w\+\)\s*=" contains=luaSymbolOperator contained containedin=luaTableBlock
+highlight link luaTableKey Identifier
+% @end
+
+
+% @component Main
+local M = {}
+
+local function add_debug_cmd()
+  vim.api.nvim_command([[
+    function! SyntaxDebug()
+      for id in synstack(line("."), col("."))
+        echo synIDattr(id, "name")
+      endfor
+    endfunction
+  ]])
+
+  vim.api.nvim_command([[nnoremap <F5> :call SyntaxDebug()<CR>]])
+end
+
+function M.set_syntax()
+  vim.cmd("syntax clear")
+  vim.cmd([[
+  {{@ Rules ctx}}
+  ]])
+  add_debug_cmd()
+end
+
+M.setup = function()
+  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile", "FileType" }, {
+    pattern = "*.htt",
+    callback = function(args)
+      vim.bo[args.buf].filetype = "htt"
+      M.set_syntax()
+    end,
+    group = vim.api.nvim_create_augroup("HTTSetup", { clear = true })
+  })
+end
+
+
+
+return M
+% @end
