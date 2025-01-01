@@ -115,13 +115,17 @@ table.insert(M, Match('httLuaLine',
 table.insert(M, Match('httLuaLineEnd',
 	Group('CtlOpen', [=[^\s*\zs[%]]=]),
 	[[\s*]],
-	Group('', [=[<end>\s*$]=])
+	Group('', [=[<end>]=]),
+	[[\s*]],
+	Group('Lua', [[.*$]], { contains = "@Lua", keepend = true })
 ))
 
 table.insert(M, Match('httLuaLineElse',
 	Group('CtlOpen', [=[^\s*\zs[%]]=]),
 	[[\s*]],
-	Group('', [=[<else>\s*$]=])
+	Group('', [=[<else>]=]),
+	[[\s*]],
+	Group('Lua', [[.*$]], { contains = "@Lua", keepend = true })
 ))
 
 table.insert(M, Match("httDirective",

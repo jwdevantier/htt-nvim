@@ -36,15 +36,19 @@ function M.set_syntax()
   syntax match httLuaLine_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLine
   syntax match httLuaLine '\v.*$' contained contains=@Lua,luaCondElseif keepend
   
-  syntax match httLuaLineEndStart '\v^\s*[%]\s*<end>\s*$' contains=httLuaLineEndCtlOpen
+  syntax match httLuaLineEndStart '\v^\s*[%]\s*<end>\s*.*$' contains=httLuaLineEndCtlOpen
   syntax match httLuaLineEndCtlOpen '\v^\s*\zs[%]' contained nextgroup=httLuaLineEnd_e2
   syntax match httLuaLineEnd_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineEnd
-  syntax match httLuaLineEnd '\v<end>\s*$' contained
+  syntax match httLuaLineEnd '\v<end>' contained nextgroup=httLuaLineEnd_e4
+  syntax match httLuaLineEnd_e4 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineEndLua
+  syntax match httLuaLineEndLua '\v.*$' contained contains=@Lua keepend
   
-  syntax match httLuaLineElseStart '\v^\s*[%]\s*<else>\s*$' contains=httLuaLineElseCtlOpen
+  syntax match httLuaLineElseStart '\v^\s*[%]\s*<else>\s*.*$' contains=httLuaLineElseCtlOpen
   syntax match httLuaLineElseCtlOpen '\v^\s*\zs[%]' contained nextgroup=httLuaLineElse_e2
   syntax match httLuaLineElse_e2 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineElse
-  syntax match httLuaLineElse '\v<else>\s*$' contained
+  syntax match httLuaLineElse '\v<else>' contained nextgroup=httLuaLineElse_e4
+  syntax match httLuaLineElse_e4 '\v\s*' contained transparent contains=NONE nextgroup=httLuaLineElseLua
+  syntax match httLuaLineElseLua '\v.*$' contained contains=@Lua keepend
   
   syntax match httDirectiveStart '\v^\s*[%]\s*[@]\w+\s*(\w+)?\s*$' contains=httDirectiveCtlOpen
   syntax match httDirectiveCtlOpen '\v^\s*\zs[%]' contained nextgroup=httDirective_e2
